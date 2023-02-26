@@ -1,0 +1,12 @@
+From allAngles RV-BODY must obscure body focus 2nd include MandParts
+From allAngles RV-FLOOR must obscure floor focus 2nd
+From allAngles RV-FW must obscure frontwing focus 2nd
+From allAngles RV-RW must obscure rearwing focus 2nd
+From allAngles RV-FRONTWHEEL-DEFLECTOR must obscure frontwheelDeflectors focus 2nd
+From above floor must obscure RS-FLOOR-PLAN focus 2nd
+From below floor must obscure body focus 1st include RS-FLOOR-MASK
+From allAngles RV-FLOOR-FENCE must obscure fences focus 2nd
+From below fences must obscureMax_8%_of RS-FLOOR-FENCE-PLAN focus 2nd
+From sides frontwing must obscure RS-FWEP focus 2nd
+From sides rearwing must obscure RS-RWEP focus 2nd
+From sides fences must obscure RS-FLOOR-FENCE-SIDE focus 2nd

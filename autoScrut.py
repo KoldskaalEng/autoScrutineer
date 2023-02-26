@@ -8,6 +8,7 @@ import os
 from matplotlib.image import imread
 import time
 from tkinter import filedialog
+import shutil
 
 startTime = time.time()
 referenceGeometryPath = 'referenceGeometry/'
@@ -166,6 +167,43 @@ def setCameraProj(camera, bool_):
         camera.ParallelProjectionOff()
     return camera
 
+# ------------------------
+# Parse repackaging instructions
+def parseRepackagefile(file): 
+    repackDict = {} 
+
+    with open(file) as repackfile:
+        repackStr = repackfile.readlines()
+    
+    for line in repackStr:
+        line = line.strip()
+        line = line.split(' ')
+        try: 
+            repackDict[line[0]] = repackDict[2]
+        except:
+            pass
+
+    return repackDict 
+
+def createMFlowInputFolder():
+    path = os.getcwd
+    try:
+        os.mkdir(path + '/input_geometry')
+    except:
+        pass
+    
+    subfolders = [
+        'vehicle_body',
+        'high_res_surfaces',
+        'porous_media',
+        'monitoring_surfaces',
+        'specialBC'
+    ]
+    for i in subfolders:
+        try: 
+            os.mkdir(path + '/input_files/geometry/' + i)
+        except:
+            pass
 # ------------------------- 
 # Read and parse Rule file: 
 with open('rules.txt') as ruleFile:
@@ -186,7 +224,7 @@ for line in rulesStr:
         rule['number of setups'] = 1
     rules.append(rule) 
 
-# Parse rules from a xml file instead? 
+# Parse rules from a xml/json file instead? 
 
 # ------------------------- 
 # Create a folder for rendered images 
@@ -196,6 +234,15 @@ try:
     os.mkdir(rendImgPath)
 except:
     pass
+
+# -------------------------
+# Create a dict of all settings for rendering. 
+
+
+# -------------------------
+# Function for rendering individual images. 
+
+# If the main image creation loop uses these dicts instead of "assigning settings one by one", then it could be much easier to render only non complying images for the scrutineering report. 
 
 # ------------------------- 
 # Create+write image loop:
@@ -264,6 +311,8 @@ for i in range(len(rules)):
             w2if = vtk.vtkWindowToImageFilter()
             w2if.SetInput(renWin)
 
+            # Write directly to numpy array instead... 
+
             writer = vtk.vtkPNGWriter()
             writer.SetInputConnection(w2if.GetOutputPort())
 
@@ -279,6 +328,8 @@ for i in range(len(rules)):
 # ------------------------- 
 # Read all rendered images and determine legality 
 
+# It is possible to render from vtk to a numpy array, so writing all the images to pngs is not needed, and wasteful
+
 images = [f for f in os.listdir(rendImgPath) if os.path.isfile(os.path.join(rendImgPath, f))]
 
 legalSubmission = True
@@ -286,6 +337,9 @@ reportFile = "reportFile.txt"
 
 with open(reportFile, "w") as f:
     for i in range(len(rules)):
+        
+        ruleViolation = False
+        
         if testMode:
             break
 
@@ -296,7 +350,7 @@ with open(reportFile, "w") as f:
             if 'Rule' + str(i) + '_' in image:
                 selectedImages.append(image)
         
-        ruleViolation = False
+        
 
         if rule['rule type'] == 'obscure':
             for sImage in selectedImages:
@@ -305,29 +359,58 @@ with open(reportFile, "w") as f:
                 if np.max(img[:,:,0])>0.8:
                     #print('Submission violates rule no: ' + str(i))
                     f.write('Submission violates rule no: ' + str(i) + '\n')
+                    ruleViolation = True
                     break
         
         elif rule['rule type'] == 'obscureMax_8%_of':
             imgw = imread(rendImgPath + '/Rule' + str(i) + '_Image0.png')
             w = (imgw[:,:,0]>0.8).sum()
-            #print('Number of visible pixels: ', wo)
-            f.write('Number of visible pixels: ', wo, '\n')
-
             imgwo = imread(rendImgPath + '/Rule' + str(i) + '_Image0_alt.png')
             wo = (imgwo[:,:,0]>0.8).sum()
+            
+            #print('Number of visible pixels: ', wo)
+            f.write('Number of non-obscured red pixels: ' + str(wo) + '\n')
+
             #print('Total number of red pixels: ', w)
-            f.write('Total number of red pixels: ', w, '\n')
+            f.write('Total number of red pixels: ' + str(w) + '\n')
 
             covered = (wo-w)/wo
             #print('Obscured percentage of pixels: ', covered*100, '%')
-            f.write('Obscured percentage of pixels: ', covered*100, '%\n')
+            f.write('Obscured percentage of pixels: {:.3}%\n'.format(covered*100))
 
             if covered > 0.08:
                 #print('Submission violates rule no: ' + str(i))
                 f.write('Submission violates rule no: ' + str(i)+ '\n')
+                ruleViolation = True
+    
+        if not ruleViolation:
+            f.write('Submission complies with rule no: ' + str(i)+ '\n')
+    f.write('Please note that only some of the rules are checked automatically. \n Please see mantiumcallenge.com for the full list of rules. ')
+
+# -----------------------
+# submission repackaging loop. 
+repackDict = parseRepackagefile('submissionRepackaging.txt')
+createMFlowInputFolder
+mflowgeoPath = path + 'input_files/geometry'
+# Create the inputfiles folder structure... 
+
+submission_subfolders = os.listdir(path+'/submission')
+for subfolder in submission_subfolders:
+    destinationFolder = repackDict[subfolder] # finding the destination folder from the dict. 
+    subfolderPath = os.path.join(path, 'submission', subfolder)
+    files = [f for f in os.listdir(subfolderPath) if os.path.isfile(os.path.join(subfolderPath, f))]
+    for file in files:
+        shutil.copy(os.join.path(subfolderPath, file), os.path.join(mflowgeoPath, destinationFolder, file))
+
+#Create list of folder to copy 
+#   create list of files in each folder 
+
 
 time2run= time.time()-startTime
 print('Total runtime: ', time2run) 
+
+
+
 # Lav det om så den skriver en txtfil som rapport i stedet for at skrive til terminalen 
 # Compile scriptet til en exe som nemmere kan køres. 
 # flyt rundt på filerne, så mappen overholder MVRC standart mappen. 
