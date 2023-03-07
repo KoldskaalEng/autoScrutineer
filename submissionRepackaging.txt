@@ -7,5 +7,5 @@ mandParts in vehicle_body
 mirrorStrut in vehicle_body
 rearWing in high_res_surfaces
 porous_media in porous_media
-monitoring_surfaces in monitoring_surfaces
+monitor in monitoring_surfaces
 specialBC in specialBC

@@ -1,0 +1,86 @@
+solid 31_RS-RW-RWEP_V01
+   facet normal 0.000000e+00 -1.000000e+00 0.000000e+00
+      outer loop
+         vertex 3.750000e+00 3.490000e-01 7.700000e-01
+         vertex 3.890000e+00 3.490000e-01 3.700000e-01
+         vertex 4.270000e+00 3.490000e-01 7.700000e-01
+      endloop
+   endfacet
+   facet normal 0.000000e+00 -1.000000e+00 0.000000e+00
+      outer loop
+         vertex 4.270000e+00 3.490000e-01 7.700000e-01
+         vertex 3.890000e+00 3.490000e-01 3.700000e-01
+         vertex 4.225000e+00 3.490000e-01 4.000000e-01
+      endloop
+   endfacet
+   facet normal -0.000000e+00 1.000000e+00 0.000000e+00
+      outer loop
+         vertex 3.750000e+00 3.500000e-01 7.700000e-01
+         vertex 4.270000e+00 3.500000e-01 7.700000e-01
+         vertex 3.890000e+00 3.500000e-01 3.700000e-01
+      endloop
+   endfacet
+   facet normal 0.000000e+00 1.000000e+00 0.000000e+00
+      outer loop
+         vertex 3.890000e+00 3.500000e-01 3.700000e-01
+         vertex 4.270000e+00 3.500000e-01 7.700000e-01
+         vertex 4.225000e+00 3.500000e-01 4.000000e-01
+      endloop
+   endfacet
+   facet normal 8.919535e-02 0.000000e+00 -9.960142e-01
+      outer loop
+         vertex 4.225000e+00 3.490000e-01 4.000000e-01
+         vertex 3.890000e+00 3.490000e-01 3.700000e-01
+         vertex 4.225000e+00 3.500000e-01 4.000000e-01
+      endloop
+   endfacet
+   facet normal 8.919535e-02 0.000000e+00 -9.960142e-01
+      outer loop
+         vertex 4.225000e+00 3.500000e-01 4.000000e-01
+         vertex 3.890000e+00 3.490000e-01 3.700000e-01
+         vertex 3.890000e+00 3.500000e-01 3.700000e-01
+      endloop
+   endfacet
+   facet normal -9.438583e-01 0.000000e+00 -3.303507e-01
+      outer loop
+         vertex 3.890000e+00 3.490000e-01 3.700000e-01
+         vertex 3.750000e+00 3.490000e-01 7.700000e-01
+         vertex 3.890000e+00 3.500000e-01 3.700000e-01
+      endloop
+   endfacet
+   facet normal -9.438583e-01 0.000000e+00 -3.303507e-01
+      outer loop
+         vertex 3.890000e+00 3.500000e-01 3.700000e-01
+         vertex 3.750000e+00 3.490000e-01 7.700000e-01
+         vertex 3.750000e+00 3.500000e-01 7.700000e-01
+      endloop
+   endfacet
+   facet normal 0.000000e+00 0.000000e+00 1.000000e+00
+      outer loop
+         vertex 3.750000e+00 3.490000e-01 7.700000e-01
+         vertex 4.270000e+00 3.490000e-01 7.700000e-01
+         vertex 3.750000e+00 3.500000e-01 7.700000e-01
+      endloop
+   endfacet
+   facet normal -0.000000e+00 0.000000e+00 1.000000e+00
+      outer loop
+         vertex 3.750000e+00 3.500000e-01 7.700000e-01
+         vertex 4.270000e+00 3.490000e-01 7.700000e-01
+         vertex 4.270000e+00 3.500000e-01 7.700000e-01
+      endloop
+   endfacet
+   facet normal 9.926851e-01 0.000000e+00 -1.207322e-01
+      outer loop
+         vertex 4.270000e+00 3.490000e-01 7.700000e-01
+         vertex 4.225000e+00 3.490000e-01 4.000000e-01
+         vertex 4.270000e+00 3.500000e-01 7.700000e-01
+      endloop
+   endfacet
+   facet normal 9.926851e-01 0.000000e+00 -1.207322e-01
+      outer loop
+         vertex 4.270000e+00 3.500000e-01 7.700000e-01
+         vertex 4.225000e+00 3.490000e-01 4.000000e-01
+         vertex 4.225000e+00 3.500000e-01 4.000000e-01
+      endloop
+   endfacet
+endsolid 31_RS-RW-RWEP_V01

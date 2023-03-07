@@ -1,14 +1,16 @@
 # Automatic Scrutineering script by Christian aka 'Koldskaal' on f1Technical
-# For use in MVRC 
+# For use in MVRC: https://mantiumchallenge.com/
 
 import vtk
 import numpy as np
 import numpy.matlib
+from vtk.util.numpy_support import vtk_to_numpy
 import os
 from matplotlib.image import imread
 import time
-from tkinter import filedialog
+#from tkinter import filedialog
 import shutil
+from PIL import Image
 
 startTime = time.time()
 referenceGeometryPath = 'referenceGeometry/'
@@ -62,7 +64,7 @@ def appendStls(folder):
 def ruleStr2vtk(geostr):
     mapper = vtk.vtkPolyDataMapper()
     actor = vtk.vtkActor()
-    if geostr[0:3] == 'RV-' or geostr[0:3] == 'RS-':
+    if geostr[0:3] in ('RV-', 'RV_', 'RS-', 'RS_'):
         source = vtk.vtkSTLReader()
         source.SetFileName(referenceGeometryPath + geostr + '.stl')
         
@@ -73,16 +75,17 @@ def ruleStr2vtk(geostr):
     actor.SetMapper(mapper)
     return source, actor
 
-def colorActors(actor_1, actor_2, rule, testMode):
-    # add a color palette for displaying scrutineering results
-    if not testMode:
-        actor_1.GetProperty().LightingOff() #Flat coloring is best for this purpose
+def colorActors(actor_1, actor_2, rule, renderMode):
+    if not renderMode:
+        actor_1.GetProperty().LightingOff() #"Flat" coloring is best for scrutineering
         actor_2.GetProperty().LightingOff() 
 
         actor_1.GetProperty().SetColor( 0.1, 0.1, 0.1 )
         actor_2.GetProperty().SetColor( 0.9, 0.1, 0.1 )
 
-    else:
+    elif renderMode:
+        actor_1.GetProperty().LightingOn() # Shaded coloring 
+        actor_2.GetProperty().LightingOn()
         actor_1.GetProperty().SetOpacity(0.5)
 
         actor_1.GetProperty().SetColor( 0.1, 0.1, 0.1 )
@@ -91,8 +94,6 @@ def colorActors(actor_1, actor_2, rule, testMode):
     return actor_1, actor_2
 # ------------------------- 
 # Defining camera angles
-# "AllAngles" are rendered in "perspective", and other camera angles are rendered with parallel projection. 
-# Probably put all the camera functions in a seperate file.
 def cameraBelow():
     camPos = np.array([
         [0, 0, -1]
@@ -170,7 +171,7 @@ def setCameraProj(camera, bool_):
 # ------------------------
 # Parse repackaging instructions
 def parseRepackagefile(file): 
-    repackDict = {} 
+    repackDict = {'a': 1} 
 
     with open(file) as repackfile:
         repackStr = repackfile.readlines()
@@ -179,31 +180,24 @@ def parseRepackagefile(file):
         line = line.strip()
         line = line.split(' ')
         try: 
-            repackDict[line[0]] = repackDict[2]
+            repackDict.update({line[0]: line[2]})
         except:
             pass
 
     return repackDict 
 
-def createMFlowInputFolder():
-    path = os.getcwd
-    try:
-        os.mkdir(path + '/input_geometry')
-    except:
-        pass
-    
-    subfolders = [
-        'vehicle_body',
-        'high_res_surfaces',
-        'porous_media',
-        'monitoring_surfaces',
-        'specialBC'
-    ]
-    for i in subfolders:
-        try: 
-            os.mkdir(path + '/input_files/geometry/' + i)
-        except:
-            pass
+def combinePNGsToGIF(img1, img2, name):
+
+    image1 = Image.open(img1)
+    image2 = Image.open(img2)
+
+    frames = []
+
+    frames.append(image1.convert("P",palette=Image.ADAPTIVE))
+    frames.append(image2.convert("P",palette=Image.ADAPTIVE))
+
+    frames[0].save(name + '.gif', format='GIF', append_images=frames[1:], save_all=True, optimize = False, duration=1000, loop=0)
+   
 # ------------------------- 
 # Read and parse Rule file: 
 with open('rules.txt') as ruleFile:
@@ -214,17 +208,12 @@ for line in rulesStr:
     line = line.strip()
     b = line.split(' ')
     try:
-        include = b[9]
+        include = b[10]
     except:
         include = False
-    rule={'views': b[1], '1st': b[2], 'rule type': b[4], '2nd' : b[5], 'focus': b[7], 'include': include}
-    if rule['rule type'] == 'obscureMax_8%_of':
-        rule['number of setups'] = 2
-    else:
-        rule['number of setups'] = 1
-    rules.append(rule) 
+    rule={'name': b[0], 'views': b[2], '1st': b[3], 'rule type': b[5], '2nd' : b[6], 'focus': b[8], 'include': include}
 
-# Parse rules from a xml/json file instead? 
+    rules.append(rule) 
 
 # ------------------------- 
 # Create a folder for rendered images 
@@ -236,162 +225,161 @@ except:
     pass
 
 # -------------------------
-# Create a dict of all settings for rendering. 
+# Create a function for each ruletype 
+def ruleObscure(rule, ruleNumber):
+    source_1, actor_1 = ruleStr2vtk(rule['1st'])
+    source_2, actor_2 = ruleStr2vtk(rule['2nd'])
 
+    ren = vtk.vtkRenderer()
+    renWin = vtk.vtkRenderWindow()
+    renWin.SetOffScreenRendering(1)
+    renWin.AddRenderer(ren)
+    renWin.SetSize(1920,1080)
 
-# -------------------------
-# Function for rendering individual images. 
+    actor_1, actor_2 = colorActors(actor_1, actor_2, rule, False)
+    
+    ren.AddActor(actor_1)
+    ren.AddActor(actor_2)
 
-# If the main image creation loop uses these dicts instead of "assigning settings one by one", then it could be much easier to render only non complying images for the scrutineering report. 
+    ren.SetBackground( 0.05, 0.05, 0.05 )
+
+    if rule['include']:
+        s3, actor_3 = ruleStr2vtk(rule['include'])
+        actor_3.GetProperty().SetColor( 0.1, 0.1, 0.1 )
+        actor_3.GetProperty().LightingOff()
+        ren.AddActor(actor_3)
+
+    if rule['focus'] == '1st':
+        bbCords, center, radius = getBoundingBoxCoords(source_1)
+    else:
+        bbCords, center, radius = getBoundingBoxCoords(source_2)
+    
+    camPos, camViewUp, camBool = views2cam(rule['views'])
+    camera = vtk.vtkCamera()
+    camera = setCameraProj(camera, camBool)
+    ren.SetActiveCamera(camera)
+
+    renderedNonCompliace = False
+
+    for j in range(len(camPos)):
+        ren.ResetCamera()
+
+        camera.SetFocalPoint(center)
+        camera.SetViewUp(camViewUp[j,:])
+
+        p = camPos[j,:]
+        mag = ((p[0]**2) + (p[1]**2) + (p[2]**2))**(0.5)
+        p1 = center + 4*radius*p/mag
+        camera.SetClippingRange(0.1*radius,100*radius)
+
+        camera.SetPosition(p1)
+
+        renWin.Render()
+
+        # Creating vtk array from a vtk-image from the hidden renderwindow, then converting said vtk_array into a numpy array to check for red pixels. 
+        w2if = vtk.vtkWindowToImageFilter() # w2if -> window to image filter
+        w2if.SetInput(renWin)
+        w2if.Update()
+
+        vtk_img = w2if.GetOutput()
+
+        width, height, _ = vtk_img.GetDimensions()
+        vtk_array = vtk_img.GetPointData().GetScalars()
+        components = vtk_array.GetNumberOfComponents()
+        # only extract the red channel, and don't bother reshaping? 
+        img = vtk_to_numpy(vtk_array).reshape(height, width, components)
+        
+        ## Checking the numpy array for red pixels 
+        if np.max(img[:,:,0])>200: # Clearly visible red pixel should be ~229
+            #print(np.max(img[:,:,0]))
+            reportStr = 'Submission violates ' + rule['name'] + '\n'
+            # write the image to png, change the colors and write the same image in a human readable way
+            if not renderedNonCompliace:
+                # Write the image used for scrutineering. 
+                writer = vtk.vtkPNGWriter()
+                writer.SetInputConnection(w2if.GetOutputPort())
+
+                w2if.Update()
+                renderedImageScrt = 'renderedImages/Rule' + str(ruleNumber) + '_Image' + str(j) + '_scrt.png'
+
+                writer.SetFileName(renderedImageScrt)
+                writer.Update()
+                writer.Write()
+
+                # Write an illustration image.
+                actor_2.GetProperty().LightingOn()
+                actor_1.GetProperty().LightingOn()
+                ren.SetBackground( 0.9, 0.9, 0.9 )
+                actor_1.GetProperty().SetOpacity(0.5)
+                renWin.Render()
+
+                w2if2 = vtk.vtkWindowToImageFilter()
+                w2if2.SetInput(renWin)
+                w2if2.Update()
+                
+                renderedImageIll = 'renderedImages/Rule' + str(ruleNumber) + '_Image' + str(j) + '_ill.png'
+                writer2 = vtk.vtkPNGWriter()
+                writer2.SetInputConnection(w2if2.GetOutputPort())
+                writer2.SetFileName(renderedImageIll)
+                writer2.Update()
+                writer2.Write()
+
+                # undo illustration settings
+                actor_2.GetProperty().LightingOff()
+                actor_1.GetProperty().LightingOff()
+                ren.SetBackground( 0.05, 0.05, 0.05 )
+                actor_1.GetProperty().SetOpacity(1)
+
+                combinePNGsToGIF(renderedImageScrt, renderedImageIll, 'renderedImages/Rule' + str(ruleNumber) + '_Image' + str(j))
+                renderedNonCompliace = True # change this to render all non complying images. 
+                del w2if, w2if2, writer, writer2
+        else:
+            reportStr = 'Submission complies with ' + rule['name'] + '\n'
+
+    return reportStr
 
 # ------------------------- 
-# Create+write image loop:
+# Main Scrutineering Loop 
+reportStr = ""
 for i in range(len(rules)):
     rule = rules[i]
+    print('Testing rule number: ' + str(i))
+    if rule['rule type'] == 'obscure':
+        reportStr = reportStr + ruleObscure(rule,i)
+    # add other rules like this: 
+    #elif rule['ruleType'] == 'somthing else':
+    #    reportStr = reportStr + someOtherRule(inputs)...
+    # 
 
-    for k in range(rule['number of setups']):
-        
-        source_1, actor_1 = ruleStr2vtk(rule['1st'])
-        source_2, actor_2 = ruleStr2vtk(rule['2nd'])
-
-        ren = vtk.vtkRenderer()
-        renWin = vtk.vtkRenderWindow()
-        renWin.SetOffScreenRendering(1)
-        renWin.AddRenderer(ren)
-        renWin.SetSize(1920,1080)
-
-        actor_1, actor_2 = colorActors(actor_1, actor_2, rule, testMode)
-        
-        altTxt = ''
-        if k == 1:
-            actor_1.GetProperty().SetOpacity(0)
-            altTxt = '_alt'
-
-        ren.AddActor(actor_1)
-        ren.AddActor(actor_2)
-
-        if testMode:
-            ren.SetBackground( 0.9, 0.9, 0.9 )
-        else:
-            ren.SetBackground( 0.05, 0.05, 0.05 )
-
-        if rule['include']:
-            s3, actor_3 = ruleStr2vtk(rule['include'])
-            actor_3.GetProperty().SetColor( 0.1, 0.1, 0.1 )
-            actor_3.GetProperty().LightingOff()
-            ren.AddActor(actor_3)
-
-        if rule['focus'] == '1st':
-            bbCords, center, radius = getBoundingBoxCoords(source_1)
-        else:
-            bbCords, center, radius = getBoundingBoxCoords(source_2)
-        
-        #print(i, bbCords, center, radius)
-        
-        camPos, camViewUp, camBool = views2cam(rule['views'])
-        camera = vtk.vtkCamera()
-        camera = setCameraProj(camera, camBool)
-        ren.SetActiveCamera(camera)
-
-        for j in range(len(camPos)):
-            ren.ResetCamera()
-
-            camera.SetFocalPoint(center)
-            camera.SetViewUp(camViewUp[j,:])
-
-            p = camPos[j,:]
-            mag = ((p[0]**2) + (p[1]**2) + (p[2]**2))**(0.5)
-            p1 = center + 4*radius*p/mag
-            camera.SetClippingRange(0.1*radius,100*radius)
-
-            camera.SetPosition(p1)
-
-            renWin.Render()
-
-            w2if = vtk.vtkWindowToImageFilter()
-            w2if.SetInput(renWin)
-
-            # Write directly to numpy array instead... 
-
-            writer = vtk.vtkPNGWriter()
-            writer.SetInputConnection(w2if.GetOutputPort())
-
-            w2if.Update()
-            renderedImageName = 'renderedImages/Rule' + str(i) + '_Image' + str(j) + altTxt + '.png'
-
-            writer.SetFileName(renderedImageName)
-            writer.Update()
-            writer.Write()
-
-            del w2if, writer
-
-# ------------------------- 
-# Read all rendered images and determine legality 
-
-# It is possible to render from vtk to a numpy array, so writing all the images to pngs is not needed, and wasteful
-
-images = [f for f in os.listdir(rendImgPath) if os.path.isfile(os.path.join(rendImgPath, f))]
-
-legalSubmission = True
+reportStr = reportStr + "NB! Geometry shouldn't touch the outer bounds of reference volumes \n"
 reportFile = "reportFile.txt"
 
 with open(reportFile, "w") as f:
-    for i in range(len(rules)):
-        
-        ruleViolation = False
-        
-        if testMode:
-            break
-
-        rule = rules[i]
-
-        selectedImages = []
-        for image in images:
-            if 'Rule' + str(i) + '_' in image:
-                selectedImages.append(image)
-        
-        
-
-        if rule['rule type'] == 'obscure':
-            for sImage in selectedImages:
-                img = imread(rendImgPath + '/' + sImage)
-
-                if np.max(img[:,:,0])>0.8:
-                    #print('Submission violates rule no: ' + str(i))
-                    f.write('Submission violates rule no: ' + str(i) + '\n')
-                    ruleViolation = True
-                    break
-        
-        elif rule['rule type'] == 'obscureMax_8%_of':
-            imgw = imread(rendImgPath + '/Rule' + str(i) + '_Image0.png')
-            w = (imgw[:,:,0]>0.8).sum()
-            imgwo = imread(rendImgPath + '/Rule' + str(i) + '_Image0_alt.png')
-            wo = (imgwo[:,:,0]>0.8).sum()
-            
-            #print('Number of visible pixels: ', wo)
-            f.write('Number of non-obscured red pixels: ' + str(wo) + '\n')
-
-            #print('Total number of red pixels: ', w)
-            f.write('Total number of red pixels: ' + str(w) + '\n')
-
-            covered = (wo-w)/wo
-            #print('Obscured percentage of pixels: ', covered*100, '%')
-            f.write('Obscured percentage of pixels: {:.3}%\n'.format(covered*100))
-
-            if covered > 0.08:
-                #print('Submission violates rule no: ' + str(i))
-                f.write('Submission violates rule no: ' + str(i)+ '\n')
-                ruleViolation = True
-    
-        if not ruleViolation:
-            f.write('Submission complies with rule no: ' + str(i)+ '\n')
-    f.write('Please note that only some of the rules are checked automatically. \n Please see mantiumcallenge.com for the full list of rules. ')
+        f.write(reportStr)
 
 # -----------------------
 # submission repackaging loop. 
 repackDict = parseRepackagefile('submissionRepackaging.txt')
-createMFlowInputFolder
-mflowgeoPath = path + 'input_files/geometry'
+
+try:
+    os.mkdir(path + '/input_files/')
+    os.mkdir(path + '/input_files/geometry/')
+except:
+    pass
+
+subfolders = [
+    'vehicle_body',
+    'high_res_surfaces',
+    'porous_media',
+    'monitoring_surfaces',
+    'specialBC']
+for i in subfolders:
+    try: 
+        os.mkdir(path + '/input_files/geometry/' + i)
+    except:
+        pass
+
+mflowgeoPath = path + '/input_files/geometry'
 # Create the inputfiles folder structure... 
 
 submission_subfolders = os.listdir(path+'/submission')
@@ -400,19 +388,6 @@ for subfolder in submission_subfolders:
     subfolderPath = os.path.join(path, 'submission', subfolder)
     files = [f for f in os.listdir(subfolderPath) if os.path.isfile(os.path.join(subfolderPath, f))]
     for file in files:
-        shutil.copy(os.join.path(subfolderPath, file), os.path.join(mflowgeoPath, destinationFolder, file))
+        shutil.copy(os.path.join(subfolderPath, file), os.path.join(mflowgeoPath, destinationFolder, file))
 
-#Create list of folder to copy 
-#   create list of files in each folder 
-
-
-time2run= time.time()-startTime
-print('Total runtime: ', time2run) 
-
-
-
-# Lav det om så den skriver en txtfil som rapport i stedet for at skrive til terminalen 
-# Compile scriptet til en exe som nemmere kan køres. 
-# flyt rundt på filerne, så mappen overholder MVRC standart mappen. 
-# Lav det så den sletter alle de filer som ikke er vigtige. 
-# Is it possible to have vtk render an image to a bitmap and not to a png file, so I dont have to create files and then delete them afterwards. 
+print('Total runtime: ', time.time()-startTime) 
