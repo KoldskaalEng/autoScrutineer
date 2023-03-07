@@ -1,4 +1,4 @@
-# autoSctrutineer
+# autoScrutineer
 
 ## Description 
 Script for automatic scrutineering in MVRC.
