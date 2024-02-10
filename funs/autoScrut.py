@@ -92,49 +92,37 @@ def scrutineer(allRules, settings):
 
 
 ### ---- Single Submission Scrutineering ---- ###
-if __name__ == '__main__':
-    from settings import *
-    from rules import *
-    
-    # It seems that VTK does not understand pathlike objects, so paths are given as strings
-    cwd_path = str(os.getcwd()) + '\\'
-    # vtk will crash immediately if it cannot find the right folder, but will continue even if it cannot find a file... 
-    print(cwd_path)
-
-    runSettings['submission geometry path'] = cwd_path + runSettings['submission geometry path']
-    runSettings['reference geometry path'] =  cwd_path + runSettings['reference geometry path']
-    runSettings['mandatory geometry path'] =  cwd_path + runSettings['mandatory geometry path']
-
-    scrutineer(allRules, runSettings)
-
-
-### ---- Multiple Submission Scrutineering ---- ###
 # if __name__ == '__main__':
-
-#     # Import settings and rules
 #     from settings import *
 #     from rules import *
 
-#     # List of submissions to test: 
-#     teams = [
-#         'team1_submission\\',
-#         'team2_submission\\',
-#     ]
+#     scrutineer(allRules, runSettings)
 
-#     # Individual colors for each team
-#     teamColors = [
-#         [0.9, 0.1, 0.1], # Team 1 -> red
-#         [0.1, 0.9, 0.1], # Team 2 -> green 
-#     ]
+
+### ---- Multiple Submission Scrutineering ---- ###
+if __name__ == '__main__':
+
+    # Import settings and rules
+    from settings import *
+    from rules import *
+
+    # List of submissions to test: 
+    teams = [
+        'team1_submission\\',
+        'team2_submission\\',
+    ]
+
+    # Individual colors for each team
+    teamColors = [
+        [0.9, 0.1, 0.1], # Team 1 -> red
+        [0.1, 0.9, 0.1], # Team 2 -> green 
+    ]
     
-#     cwd_path = str(os.getcwd()) + '\\'
+    cwd_path = str(os.getcwd()) + '\\'
 
-#     runSettings['reference geometry path'] =  cwd_path + runSettings['reference geometry path']
-#     runSettings['mandatory geometry path'] =  cwd_path + runSettings['mandatory geometry path']
-
-#     for i, team in enumerate(teams):
-
-#         runSettings['submission geometry path'] = cwd_path + team
-#         runSettings['saved image settings']['Geometry color'] = teamColors[i]
+    for i, team in enumerate(teams):
+           # Overwrite submission settings: 
+        runSettings['submission geometry path'] = cwd_path + team 
+        runSettings['saved image settings']['Geometry color'] = teamColors[i]
         
-#         scrutineer(allRules, runSettings)
+        scrutineer(allRules, runSettings)
