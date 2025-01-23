@@ -25,6 +25,16 @@ def cameraSides():
     camParProj = True
     return camPos, camViewUp, camParProj
 
+def cameraLHS():
+    camPos = np.array([
+        [0, -1, 0]
+    ])
+    camViewUp = np.array([
+        [0, 0, 1]
+    ])
+    camParProj = True
+    return camPos, camViewUp, camParProj
+
 def cameraAbove():
     camPos = np.array([
         [0, 0, 1]

@@ -2,19 +2,15 @@
 # For use in MVRC: https://mantiumchallenge.com/
 
 import os
-import sys
 import time
 import shutil
-
-from util_funs import * 
-from obscure_rule import *
-
-
+from obscure_rule import ruleObscure
+from nSections_rule import ruleNSections
 
 # Scrutineer a single submission: 
 def scrutineer(allRules, settings):
 
-    if settings['Timed running']: # Start timer 
+    if settings['Time keeping']: # Start timer 
         startTime = time.time()
 
     # Checking that geometry folder exists. 
@@ -33,14 +29,14 @@ def scrutineer(allRules, settings):
 
     report = '' 
     # Check rules: 
-    for i, rule in enumerate(allRules):
-        print('Testing rule: ' + rule['rule_section_name'] )
+    for rule in allRules:
+        print('Checking rule: ' + rule['rule_section_name'] )
 
         if rule['rule_type'] == 'obscure':
-            report = report + ruleObscure(rule, settings)
+            report += ruleObscure(rule, settings)
             
-        # elif rule['rule_type'] == 'cut-section':
-        #     report = report + ruleCutSection(rule, settings)
+        elif rule['rule_type'] == 'n sections':
+            report += ruleNSections(rule, settings)
     
     # Write the report file 
     print('Writing scrutineering report...')
@@ -53,7 +49,12 @@ def scrutineer(allRules, settings):
     # Prepairing geometries for MFlow:
     if settings['prepare geometries for Mflow']:
         print('Copying files to MFlow input folder...')
-        
+
+        # Create a list of folders in the submission folder. e.g. "body", "floor" etc. 
+        submission_geo_folders = [d for d in os.listdir(settings['submission geometry path']) if os.path.isdir(os.path.join(settings['submission geometry path'], d))] 
+        if "renderedImages" in submission_geo_folders:
+            submission_geo_folders.remove("renderedImages")
+
         # Create input_files folder for MFlow 
         try:
             os.mkdir(settings['submission geometry path'] + '\\input_files\\')
@@ -61,9 +62,7 @@ def scrutineer(allRules, settings):
         except:
             pass
         
-        # Create a list of folders in the submission folder. e.g. "body", "floor" etc. 
-        submission_geo_folders = [d for d in os.listdir(settings['submission geometry path']) if os.path.isdir(os.path.join(settings['submission geometry path'], d))] 
-        # Iterate over this list.
+        # Iterate over list of geometries in submission
         for geo_folder in submission_geo_folders:
 
             from_folder = os.path.join(settings['submission geometry path'], geo_folder)
@@ -72,7 +71,7 @@ def scrutineer(allRules, settings):
                 # If the given folder has a specified destination, e.g body -> vehicle_body. Then this is is used as the destination for the stl's within the folder 
                 to_folder = settings['sim folder repacking'][geo_folder]
             except:
-                # If no destination is specified, then stl's are copied to a folder with the same name. e.g. submission/porous_media -> input_files/porous_media
+                # If no destination is specified, then stl's are copied to a folder with the same name. e.g. submission/porous_media -> input_files/geometry/porous_media
                 to_folder = geo_folder
             
             # Get a list of all the files
@@ -87,8 +86,8 @@ def scrutineer(allRules, settings):
                 shutil.copy(os.path.join(from_folder, file), os.path.join(settings['submission geometry path'],'input_files\\geometry\\' ,to_folder, file))
 
     print('Done.')
-    if settings['Timed running']:
-        print('Total runtime: ', time.time()-startTime) # End timer 
+    if settings['Time keeping']:
+        print('Total runtime: {:.3f}'.format(time.time()-startTime)) # End timer 
 
 
 ### ---- Single Submission Scrutineering ---- ###
@@ -104,18 +103,20 @@ if __name__ == '__main__':
 
     # Import settings and rules
     from settings import *
-    from rules import *
+    # from rules import *
+    from testRules2025 import allRules # NB!NB!NB!NB! TEST RULES
 
     # List of submissions to test: 
     teams = [
-        'team1_submission\\',
-        'team2_submission\\',
+        'test_submission_1\\',
+        'test_submission_2\\',
     ]
 
-    # Individual colors for each team
+    # Individual colors for each team, if you feel that people will not identify with red cars
+    # Currently only changes illustration images for obscure rule. 
     teamColors = [
-        [0.9, 0.1, 0.1], # Team 1 -> red
-        [0.1, 0.9, 0.1], # Team 2 -> green 
+        [0.1, 0.9, 0.1], # Team 1 -> green 
+        [0.9, 0.1, 0.1], # Team 2 -> red
     ]
     
     cwd_path = str(os.getcwd()) + '\\'

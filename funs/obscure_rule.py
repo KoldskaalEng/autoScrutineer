@@ -1,7 +1,7 @@
 import vtk
 import numpy as np
 from vtk.util.numpy_support import vtk_to_numpy
-from util_funs import *
+from vtk_funs import *
 
 def ruleObscure(rule, settings): 
     # Creating actors for reference geometry and given geometry. 
@@ -19,7 +19,6 @@ def ruleObscure(rule, settings):
     
     ren.AddActor(actor_ref)
     ren.AddActor(actor_given)
-
 
     # Adding mask if specified. 
     if not rule['mask'] == 'none':
@@ -40,6 +39,8 @@ def ruleObscure(rule, settings):
     camera = vtk.vtkCamera()
     camera = setCameraProj(camera, camBool)
     ren.SetActiveCamera(camera)
+
+    violation = False
 
     # iterate through all camera positions. 
     for j in range(len(camPos)):
@@ -72,32 +73,27 @@ def ruleObscure(rule, settings):
         img = vtk_to_numpy(vtk_array).reshape(height, width, components)
         
         ## Checking the numpy array for red pixels 
-        if np.max(img[:,:,0])>200: # Clearly visible red pixel should be ~229
+        if np.max(img[:,:,0])>200:
 
-            reportStr = 'Submission violates ' + rule['rule_section_name'] + '\n'
-
+            violation = True
             # If a violation is found, then at least two images are saved: the image containing the violation, and a second image with transparent reference geometry.  
-            # If the setting save all non compliance is TRUE then all angles will be tested. if the setting is FALSE, then the loop will break after the first violation is found. 
+            # If the setting save all non compliance is TRUE then all angles will be checked. if the setting is FALSE, then the loop will break after the first violation is found. 
 
             # Write the image used for scrutineering. 
             writer = vtk.vtkPNGWriter()
             writer.SetInputConnection(w2if.GetOutputPort())
-
             w2if.Update()
             renderedImageScrt = settings['submission geometry path'] + 'renderedImages/Rule' + rule['rule_section_name'] + '_Image' + str(j) + '_scrt.png' 
-
             writer.SetFileName(renderedImageScrt)
             writer.Update()
             writer.Write()
 
-            # Write an illustration image.
+            # Save an illustration image.
             illustrationColors(actor_ref, actor_given, ren, settings)
             renWin.Render()
-
             w2if2 = vtk.vtkWindowToImageFilter()
             w2if2.SetInput(renWin)
             w2if2.Update()
-            
             renderedImageIll = settings['submission geometry path'] + 'renderedImages/Rule' + rule['rule_section_name'] + '_Image' + str(j) + '_ill.png' 
             writer2 = vtk.vtkPNGWriter()
             writer2.SetInputConnection(w2if2.GetOutputPort())
@@ -107,15 +103,16 @@ def ruleObscure(rule, settings):
 
             # Undo illustration color settings 
             colorActors(actor_ref, actor_given, ren)
-
             #combinePNGsToGIF(renderedImageScrt, renderedImageIll, 'renderedImages/Rule' + rule['rule_section_name']  + '_Image' + str(j))
 
             del w2if, w2if2, writer, writer2
 
             if not settings['saved image settings']['Save all non-compliant images']:
-                break
-
-        else:
-            reportStr = 'Submission complies with ' + rule['rule_section_name'] + '\n'
+                break # Stop checking this rule
+    
+    if violation:
+        reportStr = 'Violates {}\n'.format(rule['rule_section_name'])
+    else:
+        reportStr = 'Complies with {}\n'.format(rule['rule_section_name'])
 
     return reportStr
