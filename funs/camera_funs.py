@@ -10,7 +10,7 @@ def cameraBelow():
     camViewUp = np.array([
         [0, 1, 0]
     ])
-    camParProj = True
+    camParProj = True # Set camera to parallel projection = True
     return camPos, camViewUp, camParProj
 
 def cameraSides():
@@ -25,7 +25,7 @@ def cameraSides():
     camParProj = True
     return camPos, camViewUp, camParProj
 
-def cameraLHS():
+def cameraLHS(): # Left Hand Side
     camPos = np.array([
         [0, -1, 0]
     ])

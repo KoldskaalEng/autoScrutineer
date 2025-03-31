@@ -5,8 +5,10 @@ from vtk_funs import *
 
 def ruleObscure(rule, settings): 
     # Creating actors for reference geometry and given geometry. 
-    source_ref, actor_ref = ruleStr2vtk(rule['ref_geometry'])
-    source_given, actor_given = ruleStr2vtk(rule['given_geometry'])
+    ref_list = get_list_of_paths( rule['ref_geometry'] )
+    given_list = get_list_of_paths( rule['given_geometry'])
+    actor_ref = read_stls(ref_list, offset6dir= True)
+    actor_given = read_stls(given_list, offset6dir= False)
 
     # Creating renderer, window and adding actors. 
     ren = vtk.vtkRenderer()
@@ -20,21 +22,14 @@ def ruleObscure(rule, settings):
     ren.AddActor(actor_ref)
     ren.AddActor(actor_given)
 
-    # Adding mask if specified. 
-    if not rule['mask'] == 'none':
-        s3, actor_mask = ruleStr2vtk(rule['mask'])
-        actor_mask.GetProperty().SetColor( 0.1, 0.1, 0.1 )
-        actor_mask.GetProperty().LightingOff()
-        ren.AddActor(actor_mask)
-
     # Getting list of camera angles from the rule 
     camPos, camViewUp, camBool = views2cam(rule['angles'])
 
     # Setting up camera and focusing on the correct part
     if rule['focus'] == 'reference':
-        bbCords, center, radius = getBoundingBoxCoords(source_ref)
+        bbCords, center, radius = getBoundingBoxCoords_actor(actor_ref)
     else:
-        bbCords, center, radius = getBoundingBoxCoords(source_given)
+        bbCords, center, radius = getBoundingBoxCoords_actor(actor_given)
 
     camera = vtk.vtkCamera()
     camera = setCameraProj(camera, camBool)

@@ -4,86 +4,98 @@ from vtk.util.numpy_support import vtk_to_numpy
 from camera_funs import *
 from settings import * 
 from copy import deepcopy
+import re 
 # from PIL import Image
 
 # Get the bounding box coordinates of a vtk geometry, used to focus camera
-def getBoundingBoxCoords(geometry):
-    outline = vtk.vtkOutlineFilter()
-    outline.SetInputConnection(geometry.GetOutputPort())
+def getBoundingBoxCoords_actor(actor):
+    bounds = actor.GetMapper().GetInput().GetBounds()
+    center = [(bounds[0]+bounds[1])/2, (bounds[2]+bounds[3])/2, (bounds[4]+bounds[5])/2]
+    radius = (((bounds[1]-center[0])**2) + ((bounds[3]-center[1])**2) + ((bounds[5]-center[2])**2))**(1/2)
+    return bounds, center, radius
 
-    outlineMapper = vtk.vtkPolyDataMapper()
-    outlineMapper.SetInputConnection(outline.GetOutputPort())
+def isOfficialGeo(name: str):
+    for x in runSettings['official geometry prefix']:
+        if x == name[:len(x)]:
+            return True
+    return False
 
-    outlineActor = vtk.vtkActor()
-    outlineActor.SetMapper(outlineMapper)
+def splitAtNumber(s):
+    match = re.search(r'\d', s)
+    if match:
+        index = match.start()
+        return s[:index]
+    return s
 
-    coords = outlineActor.GetBounds() 
-    center = [(coords[0]+coords[1])/2, (coords[2]+coords[3])/2, (coords[4]+coords[5])/2]
-    radius = (((coords[1]-center[0])**2) + ((coords[3]-center[1])**2) + ((coords[5]-center[2])**2))**(1/2)
+def get_list_of_paths( geometries: list ):
+    if isinstance(geometries, str): # If you pass it a single geometry as a str, it'll still work. 
+        geometries = [geometries]
+    list_of_paths = []
 
-    return coords, center, radius
+    off_geo_path = runSettings['official geometry path']
 
+    for geometry in geometries: 
 
-def appendStls(name, return_list = False):
-    """Combines several stl-files into a single object.
-    If "return_list" is False, then all stls are combined into a single vtkAppendPolyData 
-    if "return_list" is True, then all stls are added to a list. (This is for creating cut sections)"""
-    cwd = os.getcwd()
-    if name == 'MandParts':
-        folder = os.path.join( cwd, runSettings['mandatory geometry path'] )
-    else:
-        folder = os.path.join( cwd, runSettings['submission geometry path'] + name )
+        if isOfficialGeo(geometry):
+            # If the part is in the official geometry folder, then we must make sure we read the right file: 
+            files_in_folder = [f for f in os.listdir(off_geo_path) if os.path.isfile(os.path.join(off_geo_path, f))]
+            file_no = next((i for i, j in enumerate(files_in_folder) if geometry.lower() == splitAtNumber(j.lower())), None)
+            list_of_paths.append( os.path.join(off_geo_path, files_in_folder[file_no] ) )
 
-    geometries2combine = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
-
-    if return_list:
-        source_list = []
-    else:
-        appendFilter = vtk.vtkAppendPolyData()
-
-    for file in geometries2combine:
-
-        reader = vtk.vtkSTLReader()
-        reader.SetFileName(folder + '\\' + file)
-        reader.Update()
-
-        if return_list:
-            source_list.append(deepcopy(reader))
         else:
-            appendInput = vtk.vtkPolyData()
-            appendInput.ShallowCopy(reader.GetOutput())
+            # if the part is from the submission folder, then just read all files in the particular folder: 
+            sub_geo_path = os.path.join(runSettings['submission geometry path'], geometry)
+            list_of_paths += [os.path.join(sub_geo_path, f) for f in os.listdir(sub_geo_path) if all([os.path.isfile(os.path.join(sub_geo_path, f)), f.lower().endswith(".stl")]) ]
 
-            appendFilter.AddInputData(appendInput)
-            appendFilter.Update()
-    
-    if return_list:
-        return source_list
-    else:
-        return appendFilter
+    return list_of_paths
 
+def read_stls(list_of_paths, offset6dir = False):
+    appendFilter = vtk.vtkAppendPolyData()
+    sourceList = []
+    for path in list_of_paths:
+        reader = vtk.vtkSTLReader()
+        reader.SetFileName(path)
+        reader.Update()
+        # sourceList.append( deepcopy(reader) )
+        appendvtk(appendFilter, reader, offset6dir)
 
-# Takes the name of a geometry from the rules, and loads the geometry as vtk object. 
-def ruleStr2vtk(geo_name, return_list = False):
-    referenceGeometryPath = runSettings['reference geometry path']
     mapper = vtk.vtkPolyDataMapper()
-    actor = vtk.vtkActor()
-    if geo_name[0:3] in ('RV-', 'RV_', 'RS-', 'RS_'): # If the name starts with one of these, then look for the geometry in the reference geometry folder 
-        # list files in reference folder 
-        ref_files = [f for f in os.listdir(referenceGeometryPath) if os.path.isfile(os.path.join(referenceGeometryPath, f))]
-        
-        # pick the one that most closely matches the given geo_name. 
-        file_no = next((i for i, j in enumerate(ref_files) if geo_name.lower() in j.lower()), None)
+    mapper.SetInputConnection( appendFilter.GetOutputPort() )
 
-        source = vtk.vtkSTLReader()
-        
-        source.SetFileName(referenceGeometryPath + ref_files[file_no])
-        
-    else: # Otherwise look for the name in the submitted geometry
-        source = appendStls(geo_name, return_list)
+    actor = vtk.vtkActor()
+    actor.SetMapper( mapper )
+
+    return actor
+
+def appendvtk(appendFilter, reader, offset6dir):
+    appendInput = vtk.vtkPolyData()
+    if offset6dir:
+        transforms = [ 
+            [ 0.001, 0, 0],
+            [-0.001, 0, 0],
+            [0,  0.001, 0],
+            [0, -0.001, 0],
+            [0, 0,  0.001],
+            [0, 0, -0.001] ]
+        for t in transforms:
+            transform = vtk.vtkTransform()
+            transform.Translate(t[0], t[1], t[2])
+
+            transformedPolyData = vtk.vtkTransformPolyDataFilter()
+            transformedPolyData.SetTransform(transform)
+            transformedPolyData.SetInputData( reader.GetOutput() )
+            transformedPolyData.Update()
+
+            appendFilter.AddInputData(transformedPolyData.GetOutput())
+            appendFilter.Update()
+
+    else:
+        appendInput.ShallowCopy(reader.GetOutput())
+
+        appendFilter.AddInputData(appendInput)
+        appendFilter.Update()
     
-    mapper.SetInputConnection(source.GetOutputPort())
-    actor.SetMapper(mapper)
-    return source, actor
+    return
 
 def colorActors(actor_1, actor_2, ren): # Color Actors for scrutineering.
     # Actor1 = reference geometry, Actor2 = given geometry
@@ -116,24 +128,47 @@ def illustrationColors(actor_1, actor_2, ren, settings): # Coloring for report i
 
     return 
 
-
-# def combinePNGsToGIF(img1, img2, name):
-
-#     image1 = Image.open(img1)
-#     image2 = Image.open(img2)
-
-#     frames = []
-
-#     frames.append(image1.convert("P",palette=Image.ADAPTIVE))
-#     frames.append(image2.convert("P",palette=Image.ADAPTIVE))
-
-#     frames[0].save(name + '.gif', format='GIF', append_images=frames[1:], save_all=True, optimize = False, duration=1000, loop=0)
-
 def views2cam(views):
     return {
         'all' : cameraAllAngles(),
         'below' : cameraBelow(),
         'above': cameraAbove(),
+        'top': cameraAbove(), 
         'sides': cameraSides(),
         'left side': cameraLHS(),
         'front': cameraFront()}[views]
+
+# def _test_():
+    
+#     geometries = ["RV-RW-PROFILES_v", "RV-RW-PYLON_v", "rw_endplate"]
+#     # geometries = ["rw_endplate"]
+
+#     list_of_paths = get_list_of_paths(geometries)
+#     print(list_of_paths)
+#     actor = read_stls(list_of_paths, offset6dir= True)
+#     actor.GetProperty().SetOpacity(0.2)
+
+#     bounds = actor.GetMapper().GetInput().GetBounds()
+#     print(bounds)
+
+#     geo2 = ["rw_endplate"]
+#     list2 = get_list_of_paths(geo2)
+#     actor2 = read_stls(list2, offset6dir= False)
+#     actor2.GetProperty().SetColor(1.0, 0.0, 0.0)
+
+#     ren = vtk.vtkRenderer()
+#     ren.AddActor( actor )
+#     ren.AddActor( actor2 )
+#     renwin = vtk.vtkRenderWindow()
+#     renwin.AddRenderer(ren)
+
+#     interactor = vtk.vtkRenderWindowInteractor()
+#     interactor.SetRenderWindow(renwin)
+
+#     renwin.Render()
+#     interactor.Initialize()
+#     interactor.Start()
+
+
+# if __name__ == "__main__":
+#     _test_()

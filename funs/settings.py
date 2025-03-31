@@ -4,31 +4,46 @@ savedImageSettings = {
     'Geometry color': [0.9, 0.1, 0.1],
     'Background color': [0.2, 0.2, 0.2],
     'Reference geometry color': [0.05, 0.05, 0.05],
-    'Reference geometry opacity': 0.5,
+    'Reference geometry opacity': 0.1,
     'Save all non-compliant images': True, # Set to True to save ALL non-complying images. If False then only the first violation is saved. 
-    # Saving all images can take quite a while. it is ~5x faster to save only the first violation.
+    # Saving all images obv. takes longer time. 
 }
 
+hires = "high_res_surfaces"
+vb = "vehicle_body"
+
 scrutineering2simulationFolder = { #Specifies which folder to place the different parts in. 
-    'body': 'vehicle_body',
-    'fences': 'high_res_surfaces',
-    'floor': 'vehicle_body',
-    'front_wing': 'high_res_surfaces',
-    'mirror_strut': 'vehicle_body', 
-    'rear_wing': 'high_res_surfaces',
-    'rw_endplate': 'high_res_surfaces',
-    'rw_flaps': 'high_res_surfaces',
-    'rw_mainplane': 'high_res_surfaces',
-    'rw_pylon': 'high_res_surfaces',
+    "special_bc": "special_bc",
+    "monitoring_surfaces": "monitoring_surfaces",
+    "porous_media": "porous_media", 
+    "frt_suspension_arms": "frt_suspension",
+    "frt_suspension_hub": "frt_suspension",
+    "rr_suspension_arms": "rr_suspension",
+    "rr_suspension_hub": "rr_suspension",
+    'bodywork': vb,
+    'fw_mainplane': hires,
+    'fw_flaps': hires,
+    'fw_ep': hires,
+    'fw_strake': hires,
+    'floor_body': vb,
+    'floor_board': hires,
+    'floor_led': hires,
+    'floor_fence': hires,
+    'rw_mainplane': hires,
+    'rw_flaps': hires,
+    'rw_ep': hires,
+    'rw_pylon': hires,
+    'mirror': hires, 
 } # Anything not in this dict, will be placed in a folder of the same name as the in the submission folder. e.g. submission/POROUS_MEDIA/part.stl is copied to input_files/POROUS_MEDIA/part.stl
 
 runSettings = {
-    'reference geometry path': 'referenceGeometry\\',
-    'submission geometry path': 'team1_submission\\',
+    'official geometry path': 'referenceGeometry\\',# Keep all official geoemtries in one folder. RVs, RSs and MAND_
+    'official geometry prefix': ('RV-', 'RV_', 'RS-', 'RS_', 'MAND_', 'MAND-'),
+    'submission geometry path': 'test_submission_1\\',
     # 'submission geometry path': 'Koldskaal_Rd1\\', # For example
-    'mandatory geometry path': 'mandParts\\',
     'saved image settings': savedImageSettings,
     'Time keeping': True,
+    'Verbose scrutineering': True,
     'sim folder repacking': scrutineering2simulationFolder,
     'prepare geometries for Mflow': True,
 
@@ -38,5 +53,4 @@ runSettings = {
 cwd_path = str(os.getcwd()) + '\\'
 
 runSettings['submission geometry path'] = cwd_path + runSettings['submission geometry path']
-runSettings['reference geometry path'] =  cwd_path + runSettings['reference geometry path']
-runSettings['mandatory geometry path'] =  cwd_path + runSettings['mandatory geometry path']
+runSettings['official geometry path'] =  cwd_path + runSettings['official geometry path']

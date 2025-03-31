@@ -27,7 +27,7 @@ allRules = [
         'rule_type': 'obscure',
         'angles': 'all',
         'ref_geometry': 'RV-RWEP-BODY_v', 
-        'given_geometry': 'rw_endplate', 
+        'given_geometry': 'rw_ep', 
         'mask': 'none',   
         'focus': 'given'
     },
@@ -68,4 +68,18 @@ allRules = [
         'max_unprobed_interval': 25e-3,
         # 'probing_locations': np.linspace(0, 1, 10),
     },
+
+    {    
+        'rule_section_name': '§3.0 floor top bottom visibility',           
+        'rule_type': 'top bottom visibility',                      
+        'angle': 'left side',
+        'number_of_intersections': "<= 2", # 2 intersections means top and bottom visible. more than 2 means something is overhanging.                              
+        'given_geometry': 'floor_body',                                     
+        'cutting_plane_normal' : [0, 1, 0],
+        'sampling_method': 'specific',
+        'sampling_method': 'semi_random',
+        'sampling_interval': (0.0, 0.25),
+        'max_unprobed_interval': 25e-3,
+        'probing_locations': np.array([ 0.175 ]),
+    }
 ]

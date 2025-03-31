@@ -52,32 +52,6 @@ def Read_and_cut_stl(path_to_file, cutting_plane_normal, cutting_plane_origin):
 
     return cut_actor
 
-def get_list_of_paths(geometries):
-    list_of_paths = []
-    if isinstance(geometries, str):
-        geometries = [geometries]
-    
-    for geometry in geometries:
-        # Check if it is an RV/RS
-        if geometry[0:3] in ('RV-', 'RV_', 'RS-', 'RS_'):
-            ref_geo_path = runSettings['reference geometry path']
-            # This ugly list comprehension stuff is added, so that you dont need to specify the version number for the reference geometries in the rules. 
-            ref_files = [f for f in os.listdir(ref_geo_path) if os.path.isfile(os.path.join(ref_geo_path, f))]
-            file_no = next((i for i, j in enumerate(ref_files) if geometry.lower() in j.lower()), None)
-            list_of_paths.append(ref_files[file_no])
-
-        # Check if it is the mandatory parts
-        if geometry == "MandParts":
-            mand_geo_path = runSettings['mandatory geometry path']
-            list_of_paths += [os.path.join(mand_geo_path, f) for f in os.listdir(mand_geo_path) if os.path.isfile(os.path.join(mand_geo_path, f))]
-
-        # Otherwise read from the submission:
-        else:
-            sub_geo_path = os.path.join(runSettings['submission geometry path'], geometry)
-            list_of_paths += [os.path.join(sub_geo_path, f) for f in os.listdir(sub_geo_path) if os.path.isfile(os.path.join(sub_geo_path, f))]
-
-    return list_of_paths
-
 def countSections(img: np.ndarray, corner: tuple = (0,0)):
     """ Counts the number of sections in the image by "flood-filling" the surrounding air, and then iteratively counting and filling the remaining parts of the image.
     Assumes that img is a B/W boolean array. 
@@ -136,8 +110,10 @@ def ruleNSections(rule, settings):
     renWin.SetSize(1920,1080)
 
     # Setting up camera and focusing on the part being cut
-    combined_stls, _ = ruleStr2vtk(rule['given_geometry'])
-    bbCords, center, radius = getBoundingBoxCoords(combined_stls)
+    geometries_2_cut = get_list_of_paths(rule["given_geometry"])
+    combined_stls = read_stls(geometries_2_cut, offset6dir= False)
+
+    bbCords, center, radius = getBoundingBoxCoords_actor(combined_stls)
 
     camera = vtk.vtkCamera()
     camera = setCameraProj(camera, camBool)
@@ -153,8 +129,6 @@ def ruleNSections(rule, settings):
     # Prepare math: 
     normal_vec = np.array(rule["cutting_plane_normal"])
     cutting_plane_normal = tuple( normal_vec )
-
-    geometries_2_cut = get_list_of_paths(rule["given_geometry"])
 
     # Iterate through all sections:
     for i in range(len(section_locs)):
