@@ -7,7 +7,6 @@ def ruleObscure(rule, settings):
     # Creating actors for reference geometry and given geometry. 
     ref_list = get_list_of_stls(settings["reference_geometries"], rule['ref_geometry'], "name")
     given_list = get_list_of_stls(settings["submission_geometries"], rule['given_geometry'], "folder")
-    breakpoint()
     actor_ref = read_stls(ref_list, offset6dir= True)
     actor_given = read_stls(given_list, offset6dir= False)
 
