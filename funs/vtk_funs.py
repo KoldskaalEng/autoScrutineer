@@ -1,11 +1,54 @@
 import vtk
 import os
+import sys
 from vtk.util.numpy_support import vtk_to_numpy
 from camera_funs import *
 from settings import * 
 from copy import deepcopy
 import re 
 # from PIL import Image
+
+
+def get_list_of_stls(all_stls, filter_vals, filter_type = "folder"):
+    """
+    Returns a list of stl files based on a filter.
+    """
+    filtered_stls = []
+    for stlf in all_stls:
+        name_comps = stlf.split(os.path.sep)
+        if filter_type == "folder":
+            if name_comps[-2] in filter_vals:
+                filtered_stls.append(stlf)
+        elif filter_type == "name":
+            if name_comps[-1].startswith(filter_vals):
+                filtered_stls.append(stlf)
+        else:
+            raise("We should not be here!")
+
+    return filtered_stls
+
+
+def get_stl_geometries(ref_geo_folder):
+    print(f"Searching for STL files in: {ref_geo_folder}")
+
+    if not os.path.isdir(ref_geo_folder):
+        sys.exit('❌ Folder not found!\nPlease provide a valid path when calling the script.')
+
+    stls = []
+
+    # Recursively walk through the directory tree
+    for dirpath, dirnames, filenames in os.walk(ref_geo_folder):
+        for filename in filenames:
+            if filename.lower().endswith(".stl"):
+                full_path = os.path.join(dirpath, filename)
+                stls.append(full_path)
+
+    if not stls:
+        sys.exit("❌ Could not find any STL files in the provided reference geometry folder!")
+    else:
+        print(f"✅ Found {len(stls)} STL files, provided by MVRC, used as reference geometries.")
+        return stls
+
 
 # Get the bounding box coordinates of a vtk geometry, used to focus camera
 def getBoundingBoxCoords_actor(actor):

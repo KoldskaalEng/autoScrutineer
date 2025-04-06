@@ -5,8 +5,9 @@ from vtk_funs import *
 
 def ruleObscure(rule, settings): 
     # Creating actors for reference geometry and given geometry. 
-    ref_list = get_list_of_paths( rule['ref_geometry'] )
-    given_list = get_list_of_paths( rule['given_geometry'])
+    ref_list = get_list_of_stls(settings["reference_geometries"], rule['ref_geometry'], "name")
+    given_list = get_list_of_stls(settings["submission_geometries"], rule['given_geometry'], "folder")
+    breakpoint()
     actor_ref = read_stls(ref_list, offset6dir= True)
     actor_given = read_stls(given_list, offset6dir= False)
 
@@ -78,7 +79,7 @@ def ruleObscure(rule, settings):
             writer = vtk.vtkPNGWriter()
             writer.SetInputConnection(w2if.GetOutputPort())
             w2if.Update()
-            renderedImageScrt = settings['submission geometry path'] + 'renderedImages/Rule' + rule['rule_section_name'] + '_Image' + str(j) + '_scrt.png' 
+            renderedImageScrt = settings['submission geometry path'] + 'autoScrut_renderedImages/Rule' + rule['rule_section_name'] + '_Image' + str(j) + '_scrt.png'
             writer.SetFileName(renderedImageScrt)
             writer.Update()
             writer.Write()
@@ -89,7 +90,7 @@ def ruleObscure(rule, settings):
             w2if2 = vtk.vtkWindowToImageFilter()
             w2if2.SetInput(renWin)
             w2if2.Update()
-            renderedImageIll = settings['submission geometry path'] + 'renderedImages/Rule' + rule['rule_section_name'] + '_Image' + str(j) + '_ill.png' 
+            renderedImageIll = settings['submission geometry path'] + 'autoScrut_renderedImages/Rule' + rule['rule_section_name'] + '_Image' + str(j) + '_ill.png'
             writer2 = vtk.vtkPNGWriter()
             writer2.SetInputConnection(w2if2.GetOutputPort())
             writer2.SetFileName(renderedImageIll)
