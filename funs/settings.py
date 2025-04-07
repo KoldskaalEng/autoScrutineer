@@ -37,10 +37,10 @@ scrutineering2simulationFolder = { #Specifies which folder to place the differen
 } # Anything not in this dict, will be placed in a folder of the same name as the in the submission folder. e.g. submission/POROUS_MEDIA/part.stl is copied to input_files/POROUS_MEDIA/part.stl
 
 runSettings = {
-    'official geometry path': 'referenceGeometry\\',# Keep all official geoemtries in one folder. RVs, RSs and MAND_
-    'official geometry prefix': ('RV-', 'RV_', 'RS-', 'RS_', 'MAND_', 'MAND-'),
-    'submission geometry path': 'test_submission_1\\',
-    # 'submission geometry path': 'Koldskaal_Rd1\\', # For example
+    # 'official geometry path': 'referenceGeometry\\',# Keep all official geoemtries in one folder. RVs, RSs and MAND_
+    # 'official geometry prefix': ('RV-', 'RV_', 'RS-', 'RS_', 'MAND_', 'MAND-'),
+    # 'submission geometry path': 'test_submission_1\\',
+    # # 'submission geometry path': 'Koldskaal_Rd1\\', # For example
     'saved image settings': savedImageSettings,
     'Time keeping': True,
     'Verbose scrutineering': True,
@@ -48,9 +48,9 @@ runSettings = {
     'prepare geometries for Mflow': True,
 
 }
-
-# It seems that VTK does not understand pathlike objects, so paths are given as strings
-cwd_path = str(os.getcwd()) + '\\'
-
-runSettings['submission geometry path'] = cwd_path + runSettings['submission geometry path']
-runSettings['official geometry path'] =  cwd_path + runSettings['official geometry path']
+#
+# # It seems that VTK does not understand pathlike objects, so paths are given as strings
+# cwd_path = str(os.getcwd()) + '\\'
+#
+# runSettings['submission geometry path'] = cwd_path + runSettings['submission geometry path']
+# runSettings['official geometry path'] =  cwd_path + runSettings['official geometry path']

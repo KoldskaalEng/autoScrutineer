@@ -15,10 +15,11 @@ During scrutineering a report (report.txt) is written in the submission folder. 
 After scrutineering parts are copied from the submission folder to a *input_files* folder following the familiar MFlow structure.
 
 ## Setup
-The script is written for python 3.9 it makes use of the following non-standard libraries:
-* numpy 
-* [vtk](https://pypi.org/project/vtk/)
-* skimage
+The script is written for python 3.9 it makes use of the following non-standard libraries:  
+
+* [numpy](https://numpy.org/)  
+* [vtk](https://pypi.org/project/vtk/)  
+* [skimage](https://pypi.org/project/scikit-image/)  
 
 If you use Anaconda (recommended) then you only need to add vtk to the default anaconda python environment: in Anaconda go to *Environments, select one, open Terminal, pip install vtk*
 

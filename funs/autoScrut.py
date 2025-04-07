@@ -2,11 +2,14 @@
 # For use in MVRC: https://mantiumchallenge.com/
 
 import os
+import sys
+import argparse
 import time
 import shutil
 from obscure_rule import ruleObscure
 from nSections_rule import ruleNSections
 from topBottomVis_rule import ruleTopBottomVisibility
+from vtk_funs import get_stl_geometries
 
 # Scrutineer a single submission: 
 def scrutineer(allRules, settings):
@@ -15,47 +18,42 @@ def scrutineer(allRules, settings):
         startTime = time.time()
 
     # Checking that geometry folder exists. 
-    if os.path.isdir(settings['submission geometry path']):
-        print('Checking geometries in folder: ' + settings['submission geometry path'])
-    else:
-        print('Submission geometry folder not found! check settings')
-        return # If the folder is not found then quit. 
+    if not os.path.isdir(settings['submission geometry path']):
+        sys.exit('Submission geometry folder not found!\nPlease provide valid folder!')
 
     report = '' 
+    legalFolders = list(set(settings['sim folder repacking'].values()))
+    geo_path = os.path.join(settings['submission geometry path'], 'input_files', 'geometry')
     # Checking the folders in the submission folder. 
-    folders = [f for f in os.listdir(settings['submission geometry path']) if os.path.isdir(os.path.join(settings['submission geometry path'], f))]
+    folders = [f for f in os.listdir(geo_path) if f in legalFolders]
     wrongFolders = []
-    legalFolders = list( settings['sim folder repacking'].keys() )
     for folder in folders:
-        if not folder in legalFolders:
+        if folder not in legalFolders:
             wrongFolders.append(folder)
-    if wrongFolders:
+    if len(wrongFolders) > 0:
         report += "Wrongly named folders detected: " + ", ".join(wrongFolders) + "\n"
         report += "These will not be included in input_files!\n"
-    
+
     # Create folder for scrutineering images. 
-    rendImgPath = settings['submission geometry path'] + '\\renderedImages'
-    try: 
-        os.mkdir(rendImgPath)
-    except:
-        pass
+    rendImgPath = os.path.join(settings['submission geometry path'], 'autoScrut_renderedImages')
+    if not os.path.exists(rendImgPath):
+        os.makedirs(rendImgPath)
 
     # Check rules: 
-    for rule in allRules:
-        print('Checking rule: ' + rule['rule_section_name'] )
-
-        if rule['rule_type'] == 'obscure':
-            report += ruleObscure(rule, settings)
+    for rule, rule_settings in allRules.items():
+        print('Checking rule: ' + rule)
+        if rule_settings['rule_type'] == 'obscure':
+            report += ruleObscure(rule_settings, settings)
             
-        elif rule['rule_type'] == 'n sections':
-            report += ruleNSections(rule, settings)
-        
-        elif rule['rule_type'] == 'top bottom visibility':
-            report += ruleTopBottomVisibility(rule, settings)
+        elif rule_settings['rule_type'] == 'n sections':
+            report += ruleNSections(rule_settings, settings)
+
+        elif rule_settings['rule_type'] == 'top bottom visibility':
+            report += ruleTopBottomVisibility(rule_settings, settings)
     
     # Write the report file 
     print('Writing scrutineering report...')
-    reportFile = settings['submission geometry path'] + "scrutineering_report.txt"
+    reportFile = os.path.join(settings['submission geometry path'], "scrutineering_report.txt")
     with open(reportFile, "w") as f:
         f.write(report)
     
@@ -104,14 +102,6 @@ def scrutineer(allRules, settings):
         print('Total runtime: {:.3f}'.format(time.time()-startTime)) # End timer 
 
 
-### ---- Single Submission Scrutineering ---- ###
-# if __name__ == '__main__':
-#     from settings import *
-#     from rules import *
-
-#     scrutineer(allRules, runSettings)
-
-
 ### ---- Multiple Submission Scrutineering ---- ###
 if __name__ == '__main__':
 
@@ -120,24 +110,31 @@ if __name__ == '__main__':
     from rules import * # Full list of proper rules!
     # from testRules2025 import allRules # NB! ONLY TEST RULES
 
-    # List of submissions to test: 
-    teams = [
-        'test_submission_1\\',
-        'test_submission_2\\',
-    ]
+    parser = argparse.ArgumentParser(description="autoScrut checks MVRC entries against many rules described on the challenge homepage.")
 
-    # Individual colors for each team, if you feel that people will not identify with red cars
-    # Currently only changes illustration images for obscure rule. 
-    teamColors = [
-        [0.1, 0.9, 0.1], # Team 1 -> green 
-        [0.9, 0.1, 0.1], # Team 2 -> red
-    ]
-    
-    cwd_path = str(os.getcwd()) + '\\'
+    parser.add_argument(
+        '-sf',
+        '--submission-folders',
+        nargs='+',  # accepts one or more values
+        required=True,
+        help='Define one or multiple folders to check.'
+    )
 
-    for i, team in enumerate(teams):
-           # Overwrite submission settings: 
-        runSettings['submission geometry path'] = cwd_path + team 
-        runSettings['saved image settings']['Geometry color'] = teamColors[i]
-        
+    parser.add_argument(
+        '-rg',
+        '--reference-geometry-folder',
+        required=True,
+        help='Specify folder with reference CAD stl files, provided by MVRC.'
+    )
+
+    args = parser.parse_args()
+
+    runSettings['reference_geometries'] = get_stl_geometries(args.reference_geometry_folder)
+    for folder in args.submission_folders:
+        # Overwrite submission settings:
+        runSettings['submission geometry path'] = folder
+        runSettings['saved image settings']['Geometry color'] = [0.8, 0.8, 0.8] # Grey, colors could later get defined in args
+        runSettings['submission_geometries'] = get_stl_geometries(os.path.join(folder,'input_files'))
+        # runSettings['official geometry path'] = args.reference_geometry_folder
+
         scrutineer(allRules, runSettings)
